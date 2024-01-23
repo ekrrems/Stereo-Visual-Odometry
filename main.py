@@ -65,7 +65,8 @@ def plot_sequence(dir_path, plot_features=False):
         if cv2.waitKey(20) & 0xFF == ord('q'):
             break
 
-plot_sequence('lamps', True)
+#plot_sequence('lamps', True)
+print('lets see if this works')
 
 
 # cv2.imshow('left', left[100])
@@ -82,8 +83,13 @@ plot_sequence('lamps', True)
 
 # Tasks fo 20/01/2024
 '''
-1. Create Odometry path 
+1. Create Odometry path: https://www.youtube.com/watch?v=WV3ZiPqd2G4
 2. Density Map with the 3d point clouds 
+
+# docker commands
+docker build -t stereo_depth .
+docker images
+
 '''
 
 
