@@ -218,7 +218,7 @@ def reprojection_residuals(self, dof, q1, q2, Q1, Q2):
 
 # Tasks fo 20/01/2024
 '''
-1. Create Odometry path: https://www.youtube.com/watch?v=WV3ZiPqd2G4
+1. Create Odometry path: 
 2. Density Map with the (Done)
 3. 3d point clouds 
 
@@ -226,6 +226,9 @@ def reprojection_residuals(self, dof, q1, q2, Q1, Q2):
 docker build -t stereo_depth .
 docker images
 
+links::
+https://github.com/PacktPublishing/OpenCV-with-Python-By-Example/blob/master/Chapter11/stereo_match.py
+https://www.youtube.com/watch?v=WV3ZiPqd2G4
 '''
 
 
