@@ -65,8 +65,8 @@ def plot_sequence(dir_path, plot_features=False):
         if cv2.waitKey(20) & 0xFF == ord('q'):
             break
 
-#plot_sequence('lamps', True)
-print('lets see if this works')
+# plot_sequence('lamps', True)
+print(' okay this is working')
 
 
 # cv2.imshow('left', left[100])
