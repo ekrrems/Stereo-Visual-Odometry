@@ -1,7 +1,7 @@
 # Stereo Visual Odometry
 
 Stereo Visual Odometry is a Python project for estimating the 3D motion trajectory of a stereo camera rig using visual odometry techniques.
-![Data GIF](https://drive.google.com/file/d/1Bx3anHUfq9Da-cmyGPJAbshQdU1nXT7E/view?usp=sharing)
+![Data GIF]([https://drive.google.com/file/d/1Bx3anHUfq9Da-cmyGPJAbshQdU1nXT7E/view?usp=sharing](https://github.com/ekrrems/Stereo-Visual-Odometry/blob/main/lamps/data.PNG))
 
 ## Overview
 
