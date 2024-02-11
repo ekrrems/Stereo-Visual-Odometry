@@ -1,7 +1,7 @@
 # Stereo Visual Odometry
 
 Stereo Visual Odometry is a Python project for estimating the 3D motion trajectory of a stereo camera rig using visual odometry techniques.
-![Data GIF]([https://drive.google.com/file/d/1Bx3anHUfq9Da-cmyGPJAbshQdU1nXT7E/view?usp=sharing](https://github.com/ekrrems/Stereo-Visual-Odometry/blob/main/lamps/data.PNG))
+![Data GIF](https://github.com/ekrrems/Stereo-Visual-Odometry/blob/main/lamps/data.PNG)
 
 ## Overview
 
@@ -15,13 +15,6 @@ This project implements stereo visual odometry using feature matching, triangula
 - **Triangulation**: Computes 3D point cloud reconstruction using stereo correspondences.
 - **Pose Estimation**: Estimates the camera's motion trajectory using visual odometry techniques.
 - **Visualization**: Visualizes the estimated camera path in a 3D plot.
-
-## Requirements
-
-- Python 3.x
-- OpenCV
-- NumPy
-- Matplotlib
 
 ## Usage
 
