@@ -1,9 +1,12 @@
-from tqdm import tqdm
-import os
+'''This file contains helper functions'''
 from pathlib import Path
 import numpy as np
 import cv2
 from scipy.optimize import least_squares
+from bokeh.io import output_file, show
+from bokeh.plotting import figure, ColumnDataSource
+from bokeh.layouts import layout
+from bokeh.models import Div
 
 def form_cam_matrix():
     """
@@ -54,6 +57,16 @@ def form_transf(R, t):
 
 
 def pair_images(dir_path):
+    """
+    Pair images from the specified directory path.
+
+    Parameters:
+    - dir_path (str): Path to the directory containing the images.
+
+    Returns:
+    - left_images (list): List of left images.
+    - right_images (list): List of right images.
+    """
     directory = Path(dir_path)
     number_counts = {}
 
@@ -71,6 +84,20 @@ def pair_images(dir_path):
 
 
 def find_features(left_img, right_img):
+    """
+    Find features in the left and right images using the SIFT algorithm.
+
+    Parameters:
+    - left_img (numpy.ndarray): Left image.
+    - right_img (numpy.ndarray): Right image.
+
+    Returns:
+    - key_points_l (list): Keypoints in the left image.
+    - key_points_r (list): Keypoints in the right image.
+    - features_l (numpy.ndarray): Features in the left image.
+    - features_r (numpy.ndarray): Features in the right image.
+    - good_matches (list): List of good matches.
+    """
     sift = cv2.SIFT_create(contrastThreshold=0.02, edgeThreshold=10)
     key_points_l, desc_l = sift.detectAndCompute(cv2.cvtColor(left_img, cv2.COLOR_BGR2GRAY), None)
     key_points_r, desc_r = sift.detectAndCompute(cv2.cvtColor(right_img, cv2.COLOR_BGR2GRAY), None)
@@ -90,6 +117,16 @@ def find_features(left_img, right_img):
 
 
 def plot_sequence(dir_path, plot_keypoints=False):
+    """
+    Plot the image sequence from the specified directory path.
+
+    Parameters:
+    - dir_path (str): Path to the directory containing the image sequence.
+    - plot_keypoints (bool): Flag to indicate whether to plot keypoints.
+
+    Returns:
+    None
+    """
     left_images, right_images = pair_images(dir_path)
 
     for i in range(len(left_images)):
@@ -113,24 +150,52 @@ def plot_sequence(dir_path, plot_keypoints=False):
             break
 
 
-def temporal_features(img1, img2, features_1, max_error=4):
+def temporal_features(img1_l, img2_l, features1_l, img1_r, img2_r, features1_r, max_error=4):
+    """
+    Track features from frame t to t+1 in both left and right images.
+
+    Parameters:
+    - img1_l (numpy.ndarray): Image frame at time t in the left camera.
+    - img2_l (numpy.ndarray): Image frame at time t+1 in the left camera.
+    - features1_l (numpy.ndarray): Features in the left image at time t.
+    - img1_r (numpy.ndarray): Image frame at time t in the right camera.
+    - img2_r (numpy.ndarray): Image frame at time t+1 in the right camera.
+    - features1_r (numpy.ndarray): Features in the right image at time t.
+    - max_error (int): Maximum error threshold for feature tracking.
+
+    Returns:
+    - features1_l (numpy.ndarray): Tracked features in the left image at time t.
+    - features2_l (numpy.ndarray): Tracked features in the left image at time t+1.
+    - features1_r (numpy.ndarray): Tracked features in the right image at time t.
+    - features2_r (numpy.ndarray): Tracked features in the right image at time t+1.
+    """
     lk_params = dict(winSize=(15, 15),
-                 maxLevel=2,
-                 criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
-    
-    features_2, status, err = cv2.calcOpticalFlowPyrLK(img1, img2, features_1, None, **lk_params)
-    trackable = np.squeeze(status.astype(bool))
-    under_thresh = np.squeeze(np.where(err[trackable] < max_error, True, False))
+                     maxLevel=2,
+                     criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
 
-    features_1 = features_1[trackable][under_thresh]
-    features_2 = np.around(features_2[trackable][under_thresh])
+    features2_l, status_l, err_l = cv2.calcOpticalFlowPyrLK(img1_l, img2_l, features1_l, None, **lk_params)
+    trackable_l = np.squeeze(status_l.astype(bool))
+    under_thresh_l = np.squeeze(np.where(err_l[trackable_l] < max_error, True, False))
 
-    h, w, _ = img1.shape
-    in_bounds = np.where(np.logical_and(features_2[:, 1] < h, features_2[:, 0] < w), True, False)
-    features_1 = features_1[in_bounds]
-    features_2 = features_2[in_bounds]
+    features1_l = features1_l[trackable_l][under_thresh_l]
+    features2_l = np.around(features2_l[trackable_l][under_thresh_l])
 
-    return features_1, features_2
+    features2_r, status_r, err_r = cv2.calcOpticalFlowPyrLK(img1_r, img2_r, features1_r, None, **lk_params)
+    trackable_r = np.squeeze(status_r.astype(bool))
+    under_thresh_r = np.squeeze(np.where(err_r[trackable_r] < max_error, True, False))
+
+    features1_r = features1_r[trackable_r][under_thresh_r]
+    features2_r = np.around(features2_r[trackable_r][under_thresh_r])
+
+    common_indices = np.intersect1d(np.arange(len(features2_l)), np.arange(len(features2_r)))
+
+    features1_l = features1_l[common_indices]
+    features2_l = features2_l[common_indices]
+
+    features1_r = features1_r[common_indices]
+    features2_r = features2_r[common_indices]
+
+    return features1_l, features2_l, features1_r, features2_r
 
 
 def reprojection_residuals(dof, feature_1, feature_2, Q1, Q2):
@@ -145,40 +210,42 @@ def reprojection_residuals(dof, feature_1, feature_2, Q1, Q2):
     -------
     residuals (ndarray): The residuals. In shape (2 * n_points * 2)
     """
-    # Get the rotation vector
     r = dof[:3]
-        # Create the rotation matrix from the rotation vector
     R, _ = cv2.Rodrigues(r)
-    # Get the translation vector
     t = dof[3:]
-    # Create the transformation matrix from the rotation matrix and translation vector
     transf = form_transf(R, t)
 
-    # Create the projection matrix for the i-1'th image and i'th image
     f_projection = np.matmul(P_l, transf)
     b_projection = np.matmul(P_l, np.linalg.inv(transf))
 
-    # Make the 3D points homogenize
     ones = np.ones((feature_1.shape[0], 1))
     Q1 = np.hstack([Q1, ones])
     Q2 = np.hstack([Q2, ones])
 
-    # Project 3D points from i'th image to i-1'th image
     feature_1_pred = Q2.dot(f_projection.T)
-    # Un-homogenize
     feature_1_pred = feature_1_pred[:, :2].T / feature_1_pred[:, 2]
 
-    # Project 3D points from i-1'th image to i'th image
     feature_2_pred = Q1.dot(b_projection.T)
-    # Un-homogenize
     feature_2_pred = feature_2_pred[:, :2].T / feature_2_pred[:, 2]
 
-    # Calculate the residuals
     residuals = np.vstack([feature_1_pred - feature_1.T, feature_2_pred - feature_2.T]).flatten()
     return residuals
 
 
 def estimate_pose(feature_1, feature_2, Q1, Q2, max_iter=100):
+    """
+    Estimate the transformation matrix for the given features and disparity.
+
+    Parameters:
+    - feature_1 (numpy.ndarray): Features in the initial frame.
+    - feature_2 (numpy.ndarray): Features in the subsequent frame.
+    - Q1 (numpy.ndarray): Disparity map for the initial frame.
+    - Q2 (numpy.ndarray): Disparity map for the subsequent frame.
+    - max_iter (int): Maximum number of iterations for optimization.
+
+    Returns:
+    - transformation_matrix (numpy.ndarray): Transformation matrix.
+    """
     early_termination_threshold = 5
     min_error = float('inf')
     early_termination = 0
@@ -203,15 +270,47 @@ def estimate_pose(feature_1, feature_2, Q1, Q2, max_iter=100):
         else:
             early_termination += 1
         if early_termination == early_termination_threshold:
-            # If we have not fund any better result in early_termination_threshold iterations
             break
     
     r = out_pose[:3]
-    # Make the rotation matrix
     R, _ = cv2.Rodrigues(r)
-    # Get the translation vector
     t = out_pose[3:]
-    # Make the transformation matrix
     transformation_matrix = form_transf(R, t)
 
     return transformation_matrix
+
+
+def visualize_paths(pred_path, html_tile="", title="VO exercises", file_out="plot.html"):
+    """
+    Visualize the predicted path in 2D.
+
+    Parameters
+    ----------
+    pred_path : np.ndarray
+        Array containing the predicted path.
+    html_tile : str, optional
+        Title for the HTML output, by default "".
+    title : str, optional
+        Title for the visualization, by default "VO exercises".
+    file_out : str, optional
+        Output file name for the plot, by default "plot.html".
+    """
+
+    output_file(file_out, title=html_tile)
+    pred_path = np.array(pred_path)
+
+    tools = "pan,wheel_zoom,box_zoom,box_select,lasso_select,reset"
+
+    pred_x, pred_z = pred_path.T
+    source = ColumnDataSource(data=dict(px=pred_path[:, 0], pz=pred_path[:, 1]))
+
+    fig = figure(title="Predicted Path (2D)", tools=tools, match_aspect=True, width_policy="max", toolbar_location="above",
+                x_axis_label="x", y_axis_label="z", height=500, width=800,
+                output_backend="webgl")
+
+    fig.line("px", "pz", source=source, line_width=2, line_color="green", legend_label="Pred")
+    fig.circle("px", "pz", source=source, size=8, color="green", legend_label="Pred")
+
+    show(layout([Div(text=f"<h1>{title}</h1>"),
+                [fig],
+                ], sizing_mode='scale_width'))
